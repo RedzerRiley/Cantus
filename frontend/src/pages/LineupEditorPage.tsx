@@ -17,14 +17,16 @@ import { LineupItemList } from '../components/LineupItemList';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { Menu } from '../components/Menu';
 import { useToast } from '../components/Toast';
-import { IconArrowLeft, IconCopy, IconEdit, IconEye, IconLink, IconList, IconPlus, IconSave, IconTrash } from '../components/icons';
+import { IconArrowLeft, IconCopy, IconEdit, IconEye, IconLink, IconList, IconPlus, IconSave, IconSort, IconTrash } from '../components/icons';
 import { formatRelativeTime, pluralize } from '../lib/format';
 import {
   draftFromLineup,
   draftItemFromSong,
   draftSignature,
   emptyDraft,
+  hasSortableParts,
   rebaseDraft,
+  sortItemsByPart,
   toLineupWrite,
   validateDraft,
   type LineupDraft,
@@ -156,6 +158,23 @@ function Editor({
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [duplicating, setDuplicating] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
+  // Re-sort by Part whenever a Part is edited (on by default; remembered per browser).
+  const [autoSort, setAutoSort] = useState(() => {
+    try {
+      return window.localStorage.getItem('cantus.autoSortParts') !== 'off';
+    } catch {
+      return true;
+    }
+  });
+  const toggleAutoSort = (on: boolean) => {
+    setAutoSort(on);
+    try {
+      window.localStorage.setItem('cantus.autoSortParts', on ? 'on' : 'off');
+    } catch {
+      /* storage unavailable — keep the in-memory choice */
+    }
+    if (on) sortByPart(true);
+  };
   const [shareToken, setShareToken] = useState<string | null>(initial?.share_token ?? null);
   // Saved lineups with songs open in music stand view; new/empty ones need editing first.
   const [mode, setMode] = useState<'edit' | 'view'>(() =>
@@ -183,6 +202,18 @@ function Editor({
   }, [isNew]);
 
   const setField = <K extends keyof LineupDraft>(k: K, v: LineupDraft[K]) => setDraft((d) => ({ ...d, [k]: v }));
+
+  // Put the songs in the order of the Mass according to each song's Part.
+  const sortByPart = (quiet = false) => {
+    const sorted = sortItemsByPart(draft.items);
+    if (sorted.every((it, i) => it === draft.items[i])) {
+      if (!quiet) announce('Songs are already in the order of the Mass.');
+      return;
+    }
+    setField('items', sorted);
+    announce('Songs sorted into the order of the Mass.');
+  };
+  const sortableParts = hasSortableParts(draft.items);
 
   const save = useCallback(
     async (e?: FormEvent) => {
@@ -369,6 +400,23 @@ function Editor({
                 Add songs
               </Button>
             </div>
+            {draft.items.length > 1 && (
+              <div className="sort-controls">
+                <Button
+                  size="sm"
+                  icon={<IconSort size={16} />}
+                  onClick={() => sortByPart()}
+                  disabled={!sortableParts}
+                  title={sortableParts ? 'Order the songs by their Part: Entrance, Gloria … Recessional' : 'Give at least two songs a Part (Entrance, Gloria, …) to sort them'}
+                >
+                  Sort by part
+                </Button>
+                <label className="sort-controls__auto small">
+                  <input type="checkbox" checked={autoSort} onChange={(e) => toggleAutoSort(e.target.checked)} />
+                  Auto-sort when a part is set
+                </label>
+              </div>
+            )}
             <FormErrors messages={itemServerErrors} />
             {draft.items.length === 0 ? (
               <EmptyState
@@ -383,7 +431,7 @@ function Editor({
                 <p>Pick songs from your songbook. You can label each one (Entrance, Gloria, Communion…), and change the key.</p>
               </EmptyState>
             ) : (
-              <LineupItemList items={draft.items} onChange={(items) => setField('items', items)} announce={announce} errors={errors} onEmptied={() => addButtonRef.current?.focus()} />
+              <LineupItemList items={draft.items} onChange={(items) => setField('items', items)} announce={announce} errors={errors} onEmptied={() => addButtonRef.current?.focus()} onPartCommit={autoSort ? () => sortByPart(true) : undefined} />
             )}
           </section>
         </form>

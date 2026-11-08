@@ -60,3 +60,19 @@ export function safeNextPath(next: string | null | undefined, fallback = '/'): s
   if (!next || !next.startsWith('/') || next.startsWith('//') || next.startsWith('/\\')) return fallback;
   return next;
 }
+
+/**
+ * Token of a shared-lineup link, or null if the location isn't one.
+ * Two forms are accepted:
+ *   /share/<token>   (pretty; needs the host to send unknown paths to index.html)
+ *   /?share=<token>  (works on any static host, even without that rewrite rule)
+ */
+export function shareTokenFromLocation(pathname: string, search: string): string | null {
+  const pretty = matchPath('/share/:token', pathname)?.token;
+  if (pretty) return pretty;
+  if (matchPath('/', pathname)) {
+    const token = new URLSearchParams(search).get('share')?.trim();
+    if (token) return token;
+  }
+  return null;
+}

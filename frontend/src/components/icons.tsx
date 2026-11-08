@@ -182,3 +182,9 @@ export const IconLink = (p: IconProps) => (
     <path d="M14 10a4.5 4.5 0 0 0-6.4 0l-3 3a4.5 4.5 0 0 0 6.4 6.4l1.2-1.2" />
   </Svg>
 );
+export const IconSort = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M7 4v16M7 20l-3-3M7 20l3-3" />
+    <path d="M17 20V4M17 4l-3 3M17 4l3 3" />
+  </Svg>
+);

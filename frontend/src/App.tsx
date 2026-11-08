@@ -6,7 +6,7 @@ import { ToastProvider } from './components/Toast';
 import { AppShell } from './components/AppShell';
 import { ErrorBanner, Spinner } from './components/ui';
 import type { RouteDef } from './lib/routeMatch';
-import { matchPath, safeNextPath } from './lib/routeMatch';
+import { safeNextPath, shareTokenFromLocation } from './lib/routeMatch';
 import { LoginPage } from './pages/LoginPage';
 import { RegisterPage } from './pages/RegisterPage';
 import { HomePage } from './pages/HomePage';
@@ -47,8 +47,8 @@ function Gate() {
   const isPublic = PUBLIC_ROUTES.some((r) => r.path === pathname);
 
   // Shared lineup links work for everyone, signed in or not.
-  const shared = matchPath('/share/:token', pathname);
-  if (shared?.token) return <SharedLineupPage key={shared.token} token={shared.token} />;
+  const shareToken = shareTokenFromLocation(pathname, search);
+  if (shareToken) return <SharedLineupPage key={shareToken} token={shareToken} />;
 
   if (status === 'loading') {
     return (

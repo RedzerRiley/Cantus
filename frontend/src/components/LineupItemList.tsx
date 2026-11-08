@@ -15,12 +15,16 @@ export interface LineupItemListProps {
   errors?: Record<string, string>;
   /** Called after the last item is removed so focus can go somewhere sensible. */
   onEmptied?: () => void;
+  /** Called when a song's Part was edited and the field lost focus (used for auto-sorting). */
+  onPartCommit?: () => void;
 }
 
 const DATALIST_ID = 'lineup-label-suggestions';
 
-export function LineupItemList({ items, onChange, announce, errors = {}, onEmptied }: LineupItemListProps) {
+export function LineupItemList({ items, onChange, announce, errors = {}, onEmptied, onPartCommit }: LineupItemListProps) {
   const listRef = useRef<HTMLOListElement>(null);
+  // The Part value when its field gained focus, to tell whether it was edited.
+  const partAtFocus = useRef<string | null>(null);
   const focusRequest = useRef<{ uid: string; target: MoveDirection | 'first' } | null>(null);
   const [armedUid, setArmedUid] = useState<string | null>(null);
   const [dragUid, setDragUid] = useState<string | null>(null);
@@ -191,6 +195,14 @@ export function LineupItemList({ items, onChange, announce, errors = {}, onEmpti
                     maxLength={60}
                     placeholder="e.g. Entrance"
                     value={item.label}
+                    onFocus={() => {
+                      partAtFocus.current = item.label;
+                    }}
+                    onBlur={() => {
+                      const changed = partAtFocus.current !== null && partAtFocus.current !== item.label;
+                      partAtFocus.current = null;
+                      if (changed) onPartCommit?.();
+                    }}
                     onChange={(e) => update(index, { label: e.target.value })}
                     aria-invalid={errLabel ? true : undefined}
                     aria-describedby={errLabel ? `${idBase}-label-err` : undefined}

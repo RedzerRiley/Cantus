@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { matchPath, matchRoutes, safeNextPath } from './routeMatch';
+import { matchPath, matchRoutes, safeNextPath, shareTokenFromLocation } from './routeMatch';
 
 describe('matchPath', () => {
   it('matches static paths, ignoring trailing slashes', () => {
@@ -44,5 +44,24 @@ describe('safeNextPath', () => {
     expect(safeNextPath('https://evil.com')).toBe('/');
     expect(safeNextPath('/\\evil.com')).toBe('/');
     expect(safeNextPath(null)).toBe('/');
+  });
+});
+
+describe('shareTokenFromLocation', () => {
+  it('reads the pretty /share/<token> form', () => {
+    expect(shareTokenFromLocation('/share/abc_DEF-123', '')).toBe('abc_DEF-123');
+  });
+
+  it('reads the /?share=<token> form that needs no server rewrite', () => {
+    expect(shareTokenFromLocation('/', '?share=abc_DEF-123')).toBe('abc_DEF-123');
+    expect(shareTokenFromLocation('/', '?x=1&share=tok')).toBe('tok');
+  });
+
+  it('ignores everything else', () => {
+    expect(shareTokenFromLocation('/', '')).toBeNull();
+    expect(shareTokenFromLocation('/', '?share=')).toBeNull();
+    expect(shareTokenFromLocation('/', '?share=%20')).toBeNull();
+    expect(shareTokenFromLocation('/lineups/3', '?share=tok')).toBeNull();
+    expect(shareTokenFromLocation('/share', '')).toBeNull();
   });
 });

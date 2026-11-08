@@ -1,6 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import type { Lineup } from '../api/types';
-import { draftFromLineup, draftSignature, emptyDraft, rebaseDraft, toLineupWrite, validateDraft } from './lineupDraft';
+import {
+  draftFromLineup,
+  draftSignature,
+  emptyDraft,
+  hasSortableParts,
+  LABEL_SUGGESTIONS,
+  partRank,
+  rebaseDraft,
+  sortItemsByPart,
+  toLineupWrite,
+  validateDraft,
+} from './lineupDraft';
 import { moveUp } from './reorder';
 
 const brief = (id: number, title: string) => ({ id, title, composer: '', key: 'C', color: '', language_name: 'Tagalog', has_file: false });
@@ -64,5 +75,44 @@ describe('lineup drafts', () => {
     const rebased = rebaseDraft(draft, { ...lineup, name: 'Renamed' });
     expect(rebased.name).toBe('Renamed');
     expect(rebased.items.map((i) => i.uid)).toEqual(draft.items.map((i) => i.uid));
+  });
+});
+
+describe('parts of the Mass', () => {
+  it('puts Our Father right after Great Amen', () => {
+    const i = LABEL_SUGGESTIONS.indexOf('Great Amen');
+    expect(LABEL_SUGGESTIONS[i + 1]).toBe('Our Father');
+    expect(LABEL_SUGGESTIONS[i + 2]).toBe('Lamb of God');
+  });
+
+  it('recognises parts ignoring case, punctuation and common alternate names', () => {
+    expect(partRank('entrance')).toBe(0);
+    expect(partRank('  HOLY, Holy ')).toBe(partRank('Holy Holy'));
+    expect(partRank("Lord's Prayer")).toBe(partRank('Our Father'));
+    expect(partRank('Agnus Dei')).toBe(partRank('Lamb of God'));
+    expect(partRank('Closing')).toBe(partRank('Recessional'));
+    expect(partRank('Special arrangement')).toBeNull();
+    expect(partRank('')).toBeNull();
+  });
+
+  it('sorts into Mass order, keeping unknown parts last and ties stable', () => {
+    const items = [
+      { id: 'a', label: 'Recessional' },
+      { id: 'b', label: 'Misc' },
+      { id: 'c', label: 'Our Father' },
+      { id: 'd', label: 'Entrance' },
+      { id: 'e', label: '' },
+      { id: 'f', label: 'Communion' },
+      { id: 'g', label: 'Communion' },
+      { id: 'h', label: 'Great Amen' },
+    ];
+    expect(sortItemsByPart(items).map((i) => i.id)).toEqual(['d', 'h', 'c', 'f', 'g', 'a', 'b', 'e']);
+    // does not mutate its input
+    expect(items[0]?.id).toBe('a');
+  });
+
+  it('only offers sorting when two or more parts are known', () => {
+    expect(hasSortableParts([{ label: 'Entrance' }, { label: '' }])).toBe(false);
+    expect(hasSortableParts([{ label: 'Entrance' }, { label: 'Gloria' }])).toBe(true);
   });
 });

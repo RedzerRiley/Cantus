@@ -198,6 +198,13 @@ Persistent disks need a paid instance type (the blueprint uses `starter`), and t
 database uses a paid plan, because Render's free Postgres expires. Check Render's pricing page
 for current costs.
 
+**Static site created by hand (not from the Blueprint)?** Add this rule under the static site's
+**Redirects/Rewrites** tab, or a page opened or refreshed on a path like `/lineups/3` will show
+Render's "Not Found": source `/*`, destination `/index.html`, action **Rewrite**. Shared-lineup
+links use the form `/?share=<token>`, which opens without that rule, but the rest of the app
+still needs it. Point the web app at the API by setting `VITE_API_BASE_URL=https://<your-api>.onrender.com/api/v1`
+on the static site and adding the static site's address to the API's `CORS_ALLOWED_ORIGINS`.
+
 **S3 / Cloudflare R2 instead of a disk (optional):** remove the `disk:` block and set
 `DJANGO_FILE_STORAGE=storages.backends.s3.S3Storage`, `AWS_STORAGE_BUCKET_NAME`,
 `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` and, for R2, `AWS_S3_ENDPOINT_URL`

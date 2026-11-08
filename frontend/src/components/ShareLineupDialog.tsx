@@ -8,8 +8,12 @@ import { Button } from './ui';
 import { IconCheck, IconCopy, IconLink } from './icons';
 import { useToast } from './Toast';
 
+/**
+ * Uses the /?share= form rather than /share/<token>: it needs no server-side
+ * rewrite rule, so the link opens on any static host (see shareTokenFromLocation).
+ */
 export function shareUrl(token: string): string {
-  return `${window.location.origin}/share/${encodeURIComponent(token)}`;
+  return `${window.location.origin}/?share=${encodeURIComponent(token)}`;
 }
 
 export interface ShareLineupDialogProps {

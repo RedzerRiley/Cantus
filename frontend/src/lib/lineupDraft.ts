@@ -115,11 +115,71 @@ export const LABEL_SUGGESTIONS = [
   'Holy Holy',
   'Mystery of Faith',
   'Great Amen',
+  'Our Father',
   'Lamb of God',
   'Communion',
   'Thanksgiving',
   'Recessional',
 ] as const;
+
+/**
+ * Other common names for each part, so a label doesn't have to match the
+ * suggestion exactly to be sorted (matched ignoring case and punctuation).
+ */
+const PART_ALIASES: Record<(typeof LABEL_SUGGESTIONS)[number], string[]> = {
+  Entrance: ['opening', 'processional', 'entrance song', 'entrance hymn', 'opening song'],
+  Kyrie: ['lord have mercy'],
+  Gloria: ['glory to god'],
+  'Responsorial Psalm': ['psalm', 'responsorial', 'responsory'],
+  'Gospel Acclamation': ['alleluia', 'gospel alleluia', 'acclamation', 'lenten acclamation'],
+  Offertory: ['offering', 'offertory song', 'preparation of gifts', 'presentation of gifts'],
+  'Holy Holy': ['holy', 'holy holy holy', 'sanctus'],
+  'Mystery of Faith': ['memorial acclamation'],
+  'Great Amen': ['amen'],
+  'Our Father': ['lords prayer', 'pater noster'],
+  'Lamb of God': ['agnus dei'],
+  Communion: ['communion song', 'communion hymn'],
+  Thanksgiving: ['thanksgiving song', 'post communion', 'hymn of thanksgiving'],
+  Recessional: ['closing', 'closing song', 'recessional hymn', 'dismissal', 'sending forth'],
+};
+
+function normalizePart(label: string): string {
+  return label
+    .toLowerCase()
+    .replace(/['\u2019]/g, '') // "Lord's" → "lords"
+    .replace(/[^\p{L}\p{N}]+/gu, ' ')
+    .trim();
+}
+
+const PART_RANKS: ReadonlyMap<string, number> = (() => {
+  const map = new Map<string, number>();
+  LABEL_SUGGESTIONS.forEach((name, rank) => {
+    map.set(normalizePart(name), rank);
+    for (const alias of PART_ALIASES[name]) map.set(normalizePart(alias), rank);
+  });
+  return map;
+})();
+
+/** Position of a part in the order of the Mass, or null if it isn't a known part. */
+export function partRank(label: string): number | null {
+  return PART_RANKS.get(normalizePart(label)) ?? null;
+}
+
+/**
+ * Stable sort into the order of the Mass. Items whose part is empty or not
+ * recognised go after the recognised ones, in their current order.
+ */
+export function sortItemsByPart<T extends { label: string }>(items: readonly T[]): T[] {
+  return items
+    .map((item, index) => ({ item, index, rank: partRank(item.label) ?? Number.POSITIVE_INFINITY }))
+    .sort((a, b) => (a.rank === b.rank ? a.index - b.index : a.rank < b.rank ? -1 : 1))
+    .map((x) => x.item);
+}
+
+/** True when at least two items have a known part, so sorting is meaningful. */
+export function hasSortableParts(items: readonly { label: string }[]): boolean {
+  return items.filter((it) => partRank(it.label) !== null).length >= 2;
+}
 
 /**
  * After a save, adopt the server's canonical values but keep the client uids

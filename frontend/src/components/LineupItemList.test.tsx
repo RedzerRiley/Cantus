@@ -87,4 +87,29 @@ describe('LineupItemList', () => {
     fireEvent.change(key, { target: { value: 'A' } });
     expect((screen.getAllByLabelText('Key')[0] as HTMLInputElement).value).toBe('A');
   });
+
+  it('calls onPartCommit only when a Part was edited and the field loses focus', () => {
+    let commits = 0;
+    function PartHarness() {
+      const [items, setItems] = useState(initial);
+      return <LineupItemList items={items} onChange={setItems} announce={() => {}} onPartCommit={() => (commits += 1)} />;
+    }
+    render(<PartHarness />);
+    const [first] = screen.getAllByLabelText('Part');
+    const input = first as HTMLInputElement;
+
+    // focus + blur without editing: no commit
+    fireEvent.focus(input);
+    fireEvent.blur(input);
+    expect(commits).toBe(0);
+
+    // edit, no blur yet (still typing): no commit
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: 'Gloria' } });
+    expect(commits).toBe(0);
+
+    // blur after editing: commit once
+    fireEvent.blur(input);
+    expect(commits).toBe(1);
+  });
 });
