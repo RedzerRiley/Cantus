@@ -47,6 +47,11 @@ if not SECRET_KEY:
 
 ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1")
 
+# Render sets this to the service's public hostname (e.g. cantus-api.onrender.com).
+RENDER_EXTERNAL_HOSTNAME = os.environ.get("RENDER_EXTERNAL_HOSTNAME", "").strip()
+if RENDER_EXTERNAL_HOSTNAME and RENDER_EXTERNAL_HOSTNAME not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -62,6 +67,8 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # Serves collected static files (Django admin CSS/JS) from gunicorn.
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -154,9 +161,20 @@ STORAGES = {
         ),
     },
     "staticfiles": {
-        "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        "BACKEND": "whitenoise.storage.CompressedStaticFilesStorage",
     },
 }
+
+# S3-compatible storage (AWS S3, Cloudflare R2, …) when DJANGO_FILE_STORAGE is
+# storages.backends.s3.S3Storage. Keep the bucket PRIVATE: files are streamed
+# through the API (login or share-link checks), never linked directly.
+AWS_STORAGE_BUCKET_NAME = os.environ.get("AWS_STORAGE_BUCKET_NAME", "")
+AWS_S3_ENDPOINT_URL = os.environ.get("AWS_S3_ENDPOINT_URL") or None  # R2: https://<account>.r2.cloudflarestorage.com
+AWS_S3_REGION_NAME = os.environ.get("AWS_S3_REGION_NAME") or None  # R2: "auto"
+AWS_DEFAULT_ACL = None
+AWS_S3_FILE_OVERWRITE = False
+AWS_QUERYSTRING_AUTH = True
+# AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY are read from the environment by boto3.
 
 # --------------------------------------------------------------------------
 # CORS / CSRF
@@ -165,6 +183,9 @@ STORAGES = {
 CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", "http://localhost:5173")
 CORS_EXPOSE_HEADERS = ["Content-Disposition"]
 CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS", "http://localhost:5173")
+if RENDER_EXTERNAL_HOSTNAME:
+    # Lets the Django admin log in on the Render URL.
+    CSRF_TRUSTED_ORIGINS.append(f"https://{RENDER_EXTERNAL_HOSTNAME}")
 
 # --------------------------------------------------------------------------
 # Django REST framework
@@ -207,6 +228,8 @@ if not DEBUG:
     if env_bool("DJANGO_SECURE_PROXY_SSL_HEADER", False):
         SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
     SECURE_SSL_REDIRECT = env_bool("DJANGO_SECURE_SSL_REDIRECT", False)
+    # Platform health checks call the container over plain HTTP.
+    SECURE_REDIRECT_EXEMPT = [r"^api/v1/health/$"]
     SECURE_HSTS_SECONDS = int(os.environ.get("DJANGO_SECURE_HSTS_SECONDS", "0") or "0")
     SECURE_HSTS_INCLUDE_SUBDOMAINS = SECURE_HSTS_SECONDS > 0
 

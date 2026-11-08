@@ -2,14 +2,14 @@ import { describe, expect, it } from 'vitest';
 import { buildSongRequest, emptySongValues, songToValues, validateSongValues, type SongFormValues } from './songForm';
 import type { Song } from '../api/types';
 
-const values: SongFormValues = { title: '  Pananagutan ', composer: 'E. P. Hontiveros, SJ', language: 2, key: ' G ', notes: 'Capo 2', tag_ids: [3, 7] };
+const values: SongFormValues = { title: '  Pananagutan ', composer: 'E. P. Hontiveros, SJ', language: 2, key: ' G ', notes: 'Capo 2', color: '', tag_ids: [3, 7] };
 
 describe('buildSongRequest', () => {
   it('uses JSON when there is no file change', () => {
     const req = buildSongRequest(values, null, false);
     expect(req.kind).toBe('json');
     if (req.kind !== 'json') return;
-    expect(req.body).toEqual({ title: 'Pananagutan', composer: 'E. P. Hontiveros, SJ', language: 2, key: 'G', notes: 'Capo 2', tag_ids: [3, 7] });
+    expect(req.body).toEqual({ title: 'Pananagutan', composer: 'E. P. Hontiveros, SJ', language: 2, key: 'G', notes: 'Capo 2', color: '', tag_ids: [3, 7] });
   });
 
   it('uses multipart with repeated tag_ids when a file is attached', () => {

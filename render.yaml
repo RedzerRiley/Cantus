@@ -1,0 +1,96 @@
+# Render Blueprint for Cantus — https://render.com/docs/blueprint-spec
+#
+#   cantus-api  Docker web service (Django + gunicorn) with a persistent disk for uploads
+#   cantus-web  Static site (React build) that forwards /api/* to cantus-api
+#   cantus-db   Managed PostgreSQL
+#
+# IMPORTANT: if Render gives the API a different URL than
+# https://cantus-api.onrender.com (e.g. the name is taken), update the two
+# rewrite destinations under cantus-web below and redeploy.
+
+services:
+  - type: web
+    name: cantus-api
+    runtime: docker
+    region: singapore
+    # Persistent disks need a paid instance type; uploads would be lost on every
+    # deploy without one.
+    plan: starter
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    healthCheckPath: /api/v1/health/
+    autoDeploy: true
+    disk:
+      name: cantus-media
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: DJANGO_DEBUG
+        value: "false"
+      - key: DJANGO_SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        fromDatabase:
+          name: cantus-db
+          property: connectionString
+      - key: MEDIA_ROOT
+        value: /var/data/media
+      - key: DJANGO_SECURE_PROXY_SSL_HEADER
+        value: "true"
+      - key: DJANGO_SECURE_SSL_REDIRECT
+        value: "true"
+      - key: WEB_CONCURRENCY
+        value: "2"
+      - key: MAX_UPLOAD_MB
+        value: "10"
+      # Only needed if the web app ever calls the API directly instead of via
+      # the /api rewrite (e.g. VITE_API_BASE_URL is set). Harmless otherwise.
+      - key: CORS_ALLOWED_ORIGINS
+        value: https://cantus-web.onrender.com
+
+  - type: web
+    name: cantus-web
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    pullRequestPreviewsEnabled: false
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+    headers:
+      - path: /index.html
+        name: Cache-Control
+        value: no-cache
+      - path: /sw.js
+        name: Cache-Control
+        value: no-cache
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: Referrer-Policy
+        value: same-origin
+    routes:
+      # Same-origin API: the browser talks only to cantus-web; Render proxies to the API.
+      - type: rewrite
+        source: /api/*
+        destination: https://cantus-api.onrender.com/api/*
+      # Single-page app: unknown paths (e.g. /share/<token>, /lineups/3) load index.html.
+      # Render only applies rewrites when no real file matches the path.
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+databases:
+  - name: cantus-db
+    region: singapore
+    plan: basic-256mb
+    databaseName: cantus
+    user: cantus
+    postgresMajorVersion: "16"
+    # No outside connections; only Render services in this account can connect.
+    ipAllowList: []

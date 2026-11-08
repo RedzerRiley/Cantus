@@ -3,7 +3,7 @@ import type { Lineup } from '../api/types';
 import { draftFromLineup, draftSignature, emptyDraft, rebaseDraft, toLineupWrite, validateDraft } from './lineupDraft';
 import { moveUp } from './reorder';
 
-const brief = (id: number, title: string) => ({ id, title, composer: '', key: 'C', language_name: 'Tagalog', has_file: false });
+const brief = (id: number, title: string) => ({ id, title, composer: '', key: 'C', color: '', language_name: 'Tagalog', has_file: false });
 
 const lineup: Lineup = {
   id: 3,
@@ -11,6 +11,8 @@ const lineup: Lineup = {
   description: '',
   default_language: 2,
   default_language_name: 'Tagalog',
+  color: '',
+  share_token: null,
   tags: [{ id: 5, name: 'Ordinary Time' }, { id: 1, name: 'Entrance' }],
   items: [
     { id: 12, position: 1, song: 8, song_detail: brief(8, 'Papuri sa Diyos'), label: 'Gloria', key: '', notes: '', assigned_to: '' },

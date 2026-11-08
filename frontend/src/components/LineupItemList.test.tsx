@@ -8,7 +8,7 @@ function item(uid: string, title: string): DraftItem {
   return {
     uid,
     song: Number(uid.replace(/\D/g, '')) || 1,
-    song_detail: { id: 1, title, composer: '', key: 'G', language_name: 'Latin', has_file: false },
+    song_detail: { id: 1, title, composer: '', key: 'G', color: '', language_name: 'Latin', has_file: false },
     label: '',
     key: '',
     notes: '',

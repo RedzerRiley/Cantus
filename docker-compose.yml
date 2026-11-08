@@ -1,0 +1,47 @@
+# Production-like local stack: Postgres + Django API + nginx web app.
+#   docker compose up --build      → http://localhost:8080
+# Set a real DJANGO_SECRET_KEY in your shell or a root .env file before using
+# this anywhere but your own machine.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: cantus
+      POSTGRES_USER: cantus
+      POSTGRES_PASSWORD: cantus
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cantus -d cantus"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build: ./backend
+    environment:
+      DJANGO_DEBUG: "false"
+      DJANGO_SECRET_KEY: ${DJANGO_SECRET_KEY:-local-compose-only-change-me}
+      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,api
+      DATABASE_URL: postgres://cantus:cantus@db:5432/cantus
+      MEDIA_ROOT: /var/data/media
+      CSRF_TRUSTED_ORIGINS: http://localhost:${WEB_PORT:-8080}
+    volumes:
+      - media:/var/data
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build: ./frontend
+    environment:
+      API_UPSTREAM: http://api:8000
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  pgdata:
+  media:

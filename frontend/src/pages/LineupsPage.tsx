@@ -151,7 +151,6 @@ export function LineupsPage() {
               <li key={l.id}>
                 <LineupCard
                   lineup={l}
-                  showUsed={ordering === '-last_used_at'}
                   actions={
                     <>
                       <Link to={`/lineups/${l.id}`} className="btn btn--secondary btn--sm" aria-label={`Open “${l.name}”`}>

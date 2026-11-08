@@ -176,39 +176,64 @@ See [`docs/API.md`](docs/API.md) for every endpoint, payload and error shape. It
 “Implementation notes” section describes backend details such as PUT semantics, multipart
 handling and member-removal errors.
 
-## Deployment notes (brief)
+## Deployment
 
-- Backend: `DJANGO_DEBUG=false`, a strong `DJANGO_SECRET_KEY`, `DJANGO_ALLOWED_HOSTS`,
-  `DATABASE_URL` (PostgreSQL), and `CORS_ALLOWED_ORIGINS`/`CSRF_TRUSTED_ORIGINS` if the
-  SPA is on another origin. Then run `python manage.py migrate` and
-  `python manage.py collectstatic`, and serve with `gunicorn config.wsgi`.
-  Behind a TLS proxy set `DJANGO_SECURE_PROXY_SSL_HEADER=true` (and optionally
-  `DJANGO_SECURE_SSL_REDIRECT` / `DJANGO_SECURE_HSTS_SECONDS`).
-- Uploads: persistent `MEDIA_ROOT` volume, or private S3 storage.
-- Frontend: `npm run build` and serve `frontend/dist/` as static files with a history
-  fallback to `index.html`. Proxy `/api/` to Django, or set `VITE_API_BASE_URL` at build
-  time. Don’t cache `sw.js` and `index.html` aggressively.
+### Render (recommended)
+
+`render.yaml` is a Render Blueprint that creates three resources in the Singapore region:
+
+| Resource | Type | What it does |
+|---|---|---|
+| `cantus-api` | Docker web service (`backend/Dockerfile`) | Django + gunicorn. Runs migrations on start. Uploads live on a 1 GB persistent disk at `/var/data`. |
+| `cantus-web` | Static site (`frontend/`) | Serves the React build. Forwards `/api/*` to `cantus-api` and sends all other paths to `index.html`. |
+| `cantus-db` | PostgreSQL 16 | Database. Internal connections only. |
+
+1. Push the repo to GitHub.
+2. In Render: **New → Blueprint**, pick the repo, and approve the resources.
+3. When `cantus-api` is live, check its URL. If it isn't `https://cantus-api.onrender.com`,
+   change the `/api/*` rewrite destination in `render.yaml`, push, and let `cantus-web` redeploy.
+4. Open the `cantus-web` URL and register. The first account creates the choir's workspace.
+
+Persistent disks need a paid instance type (the blueprint uses `starter`), and the
+database uses a paid plan, because Render's free Postgres expires. Check Render's pricing page
+for current costs.
+
+**S3 / Cloudflare R2 instead of a disk (optional):** remove the `disk:` block and set
+`DJANGO_FILE_STORAGE=storages.backends.s3.S3Storage`, `AWS_STORAGE_BUCKET_NAME`,
+`AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` and, for R2, `AWS_S3_ENDPOINT_URL`
+(`https://<account-id>.r2.cloudflarestorage.com`) and `AWS_S3_REGION_NAME=auto`.
+Keep the bucket **private**, because files are served only through the API's login and share-link checks.
+
+**Admin account:** run `python manage.py createsuperuser` from the `cantus-api` **Shell** tab, then
+open `https://<cantus-api URL>/admin/`.
+
+### Docker (any host, or production-like local testing)
+
+```bash
+docker compose up --build             # http://localhost:8080
+WEB_PORT=8099 docker compose up --build   # if 8080 is taken
+```
+
+`docker-compose.yml` runs Postgres, the API image and an nginx image of the web app
+(`frontend/Dockerfile`, which forwards `/api/` to the API). Set `DJANGO_SECRET_KEY` in your shell
+or a root `.env` before using it beyond your own machine.
+
+### Settings reference
+
+Backend environment variables are listed in `backend/.env.example`. In production, set
+`DJANGO_DEBUG=false`, a long random `DJANGO_SECRET_KEY`, `DJANGO_ALLOWED_HOSTS`
+(Render's hostname is added automatically) and `DATABASE_URL`. Behind a TLS proxy, also set
+`DJANGO_SECURE_PROXY_SSL_HEADER=true` and `DJANGO_SECURE_SSL_REDIRECT=true`.
 
 ## Limitations / verification status
 
 Please read this before relying on the code.
 
-- **Built in a sandbox without package installs.** Django, DRF, Vite, Vitest and the
-  React type packages were not available there, so:
-  - the **backend tests and migrations were not executed**. The code was compiled
-    (`py_compile`), linted with `ruff`, and reviewed by hand against Django 5.1 / DRF 3.15,
-    including a field-by-field check of the hand-written `0001_initial.py` against
-    `models.py`. Run `makemigrations --check`, `migrate` and `manage.py test` first;
-  - the **frontend** was bundled with esbuild and driven end to end with Playwright
-    (Chromium) against an in-memory mock of `docs/API.md`, at 375×812 (touch), 820×1180
-    (touch) and 1440×900. The run covered registration, song creation with a PDF upload,
-    search/filters, building and reordering a lineup, per-song edits, save → reload
-    persistence, duplicating, lineup filters and adding a tag in Settings. It also checked
-    for horizontal overflow, the navigation pattern, 44 px targets, accessible names,
-    dialog Esc/focus return, skip link and console errors. The pure `src/lib` and
-    `src/api` unit tests passed under a minimal Vitest shim. The component tests (`*.tsx`),
-    `tsc` type-checking and `vite build` have **not** been run.
-- **No `package-lock.json` yet.** Run `npm install` once and commit the lockfile.
+- **Verification:** the backend test suite (`manage.py test`) passes. The frontend
+  `npm run build` passes, and the Vitest suite passes except one jsdom blob-size assertion in
+  `src/api/client.test.ts`. On Node 25+, run the tests with
+  `NODE_OPTIONS=--no-experimental-webstorage` so jsdom's `localStorage` is used. The Docker
+  stack was tested end to end: register, upload, download, share link and page routing.
 - Known gaps:
   - leaving a lineup with unsaved changes uses the browser’s native `confirm()` dialog for
     in-app navigation (and `beforeunload` for tab close);
