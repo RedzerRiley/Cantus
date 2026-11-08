@@ -1,0 +1,27 @@
+# Python / Django
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+db.sqlite3
+db.sqlite3-journal
+backend/media/
+media/
+backend/staticfiles/
+
+# Node / Vite
+node_modules/
+dist/
+*.local
+*.tsbuildinfo
+
+# Env & editors
+.env
+.env.local
+.env.*.local
+.DS_Store
+.idea/
+.vscode/
+coverage/
+.ruff_cache/
+.pytest_cache/

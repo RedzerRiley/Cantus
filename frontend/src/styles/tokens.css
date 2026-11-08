@@ -1,0 +1,118 @@
+/* Design tokens — warm, calm, liturgical. All text/background pairs target WCAG AA (≥ 4.5:1). */
+:root {
+  color-scheme: light dark;
+
+  --font-sans: system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, 'Noto Sans', sans-serif;
+  --font-serif: 'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, 'Times New Roman', serif;
+
+  /* Light palette */
+  --bg: #faf7f2;            /* off-white parchment */
+  --surface: #ffffff;
+  --surface-2: #f3ede4;
+  --text: #2a1f24;          /* ~14:1 on bg */
+  --text-muted: #5e5359;    /* ~7:1 on bg */
+  --border: #e2d8cc;
+  --border-strong: #c9b9a8;
+
+  --primary: #7a1f3d;       /* deep burgundy, ~9.6:1 on white */
+  --primary-hover: #63172f;
+  --primary-soft: #f6e7ec;
+  --on-primary: #ffffff;
+
+  --accent: #b8892b;        /* gold — decorative only (borders, marks) */
+  --accent-text: #7a5710;   /* gold for text, ~6:1 on bg */
+  --accent-soft: #f7eed9;
+
+  --danger: #a1262b;
+  --danger-soft: #fbe9e9;
+  --success: #2d6a3e;
+  --success-soft: #e6f2e9;
+  --warning-text: #7a4b00;
+
+  /* Item color labels (songs & lineups) — decorative stripes/swatches */
+  --color-red: #c8423b;
+  --color-orange: #d9772b;
+  --color-yellow: #d4a72c;
+  --color-green: #3f8f4f;
+  --color-teal: #2a8a87;
+  --color-blue: #3a6fc4;
+  --color-purple: #7d4fb5;
+  --color-pink: #cf4f8c;
+
+  --focus: #1d5fbf;
+  --shadow-sm: 0 1px 2px rgba(42, 31, 36, 0.06);
+  --shadow-md: 0 4px 16px rgba(42, 31, 36, 0.1);
+  --shadow-lg: 0 12px 40px rgba(42, 31, 36, 0.18);
+
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-lg: 16px;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+
+  --tap: 44px;
+  --tabbar-h: 64px;
+  --sidebar-w: 248px;
+  --content-max: 1180px;
+
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --dur: 160ms;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1b1417;
+    --surface: #251c20;
+    --surface-2: #2f2429;
+    --text: #f3ece6;
+    --text-muted: #c4b6ba;
+    --border: #3d3036;
+    --border-strong: #5a4950;
+
+    --primary: #e8a3b9;      /* light rose on dark: ~8:1 */
+    --primary-hover: #f2bfcf;
+    --primary-soft: #3a2530;
+    --on-primary: #2a0f19;
+
+    --accent: #d8b05a;
+    --accent-text: #e5c47c;
+    --accent-soft: #3a311f;
+
+    --danger: #f19a9a;
+    --danger-soft: #3d2224;
+    --success: #94d3a5;
+    --success-soft: #1f3326;
+    --warning-text: #f0c36d;
+
+    --color-red: #f07a72;
+    --color-orange: #f5a35c;
+    --color-yellow: #f0cf5f;
+    --color-green: #7fcf8e;
+    --color-teal: #6fd0cb;
+    --color-blue: #82aef5;
+    --color-purple: #b896ea;
+    --color-pink: #f28dbd;
+
+    --focus: #8ab8ff;
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.45);
+    --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.6);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur: 0ms;
+  }
+}
